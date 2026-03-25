@@ -19,7 +19,7 @@
           <span class="brand-mark">9S</span>
           <span class="brand-copy">
             <strong>9SecVPN</strong>
-            <span>Security Baseline</span>
+            <span>Remote</span>
           </span>
         </a>
         <nav class="site-nav">
@@ -30,62 +30,11 @@
       </header>
 
       <main>
-        <section class="section-head">
-          <div>
-            <p class="eyebrow">Minimum Controls</p>
-            <h1>Security Baseline</h1>
-            <p class="lede">
-              本頁對齊規格書的最小安全控制與 Windows 11 / 路由器基線，作為 Portal 內的說明頁。
-            </p>
-          </div>
-        </section>
-
-        <section class="grid-panels">
-          <article class="panel">
-            <p class="panel-label">Access</p>
-            <h2>Identity Controls</h2>
-            <ul class="bullet-list">
-              <li>Only approved accounts</li>
-              <li>MFA is mandatory</li>
-              <li>Registered devices preferred</li>
-              <li>Step-up for high-risk sessions</li>
-            </ul>
-          </article>
-
-          <article class="panel">
-            <p class="panel-label">Network</p>
-            <h2>Exposure Rules</h2>
-            <ul class="bullet-list">
-              <li>No Internet inbound allow rules</li>
-              <li>No port forwarding for 3389 or 22</li>
-              <li>No UPnP and no DMZ to workstation</li>
-              <li>Outbound only for Tunnel, DNS and required control traffic</li>
-            </ul>
-          </article>
-
-          <article class="panel">
-            <p class="panel-label">Host</p>
-            <h2>Windows 11 Pro Baseline</h2>
-            <ul class="bullet-list">
-              <li>RDP with NLA enabled</li>
-              <li>Defender + Windows Update enabled</li>
-              <li>PowerShell / process / login audit logging enabled</li>
-              <li>cloudflared runs as Windows Service</li>
-            </ul>
-          </article>
-        </section>
-
         <section class="panel">
-          <p class="panel-label">Out Of Scope</p>
-          <h2>Do Not Build In This Version</h2>
-          <div class="tag-cloud">
-            <span>Self-hosted VPN</span>
-            <span>TCP Relay Gateway</span>
-            <span>WebRDP Gateway</span>
-            <span>Linux Workstation Variant</span>
-            <span>Multi-host Control Plane</span>
-            <span>Multi-tenant SaaS</span>
-          </div>
+          <h1>Security</h1>
+          <p class="lede">
+            Use organization-approved sign-in only. If something looks wrong, sign out and contact your admin.
+          </p>
         </section>
       </main>
     </div>

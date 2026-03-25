@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #08141f;
   --bg-alt: #0f2234;
   --panel: rgba(8, 20, 31, 0.72);
@@ -137,6 +137,14 @@ main {
 .hero {
   grid-template-columns: 1.6fr 0.95fr;
   align-items: stretch;
+}
+
+.hero.hero-minimal {
+  grid-template-columns: 1fr;
+}
+
+.h-no-marg {
+  margin: 0;
 }
 
 .hero-copy,
