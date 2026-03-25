@@ -1,0 +1,325 @@
+(function () {
+  const DEFAULT_CONFIG = {
+    apiBaseUrl: "",
+    accessLoginUrl: "",
+    targetHostLabel: "Home Workstation",
+    targetHostId: "home-ws-01",
+    historyLimit: 10,
+    enableNotifications: true,
+
+    // Local/dev fallback (only used when Cloudflare Access headers are not present).
+    mockUserEmail: "",
+    mockSourceIp: "",
+  };
+
+  const query = new URLSearchParams(window.location.search);
+  const APP_CONFIG = Object.freeze({
+    ...DEFAULT_CONFIG,
+    ...(globalThis.__APP_CONFIG__ || {}),
+    apiBaseUrl: query.get("apiBaseUrl") ?? (globalThis.__APP_CONFIG__?.apiBaseUrl || DEFAULT_CONFIG.apiBaseUrl),
+    accessLoginUrl:
+      query.get("accessLoginUrl") ?? (globalThis.__APP_CONFIG__?.accessLoginUrl || DEFAULT_CONFIG.accessLoginUrl),
+    mockUserEmail:
+      query.get("mockUserEmail") ?? (globalThis.__APP_CONFIG__?.mockUserEmail || DEFAULT_CONFIG.mockUserEmail),
+    mockSourceIp:
+      query.get("mockSourceIp") ?? (globalThis.__APP_CONFIG__?.mockSourceIp || DEFAULT_CONFIG.mockSourceIp),
+    targetHostId:
+      query.get("targetHostId") ?? (globalThis.__APP_CONFIG__?.targetHostId || DEFAULT_CONFIG.targetHostId),
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    hydrateHostLabels();
+    wireConnectLinks();
+    void hydrateHistoryLists();
+  });
+
+  function hydrateHostLabels() {
+    document.querySelectorAll("[data-target-host]").forEach((element) => {
+      element.textContent = APP_CONFIG.targetHostLabel;
+    });
+  }
+
+  function wireConnectLinks() {
+    const apiBaseUrl = normalizeUrl(APP_CONFIG.apiBaseUrl);
+    const accessLoginHref = normalizeUrl(APP_CONFIG.accessLoginUrl);
+
+    document.querySelectorAll("[data-connect-link]").forEach((element) => {
+      if (!(element instanceof HTMLAnchorElement)) {
+        return;
+      }
+
+      const startEnabled = Boolean(apiBaseUrl);
+      if (!startEnabled) {
+        // Fallback: let the user navigate to Access first (worker call will be blocked).
+        if (accessLoginHref) {
+          element.href = accessLoginHref;
+          element.removeAttribute("aria-disabled");
+          element.classList.remove("is-disabled");
+        } else {
+          element.href = "#";
+          element.setAttribute("aria-disabled", "true");
+          element.classList.add("is-disabled");
+          element.title = "Set apiBaseUrl to enable Worker-backed connect flow.";
+        }
+        return;
+      }
+
+      element.href = "#";
+      element.removeAttribute("aria-disabled");
+      element.classList.remove("is-disabled");
+
+      element.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (element.getAttribute("aria-disabled") === "true") return;
+        await startRemoteSession(element, apiBaseUrl);
+      });
+    });
+  }
+
+  async function startRemoteSession(triggerEl, apiBaseUrl) {
+    const originalText = triggerEl.textContent || "";
+    triggerEl.setAttribute("aria-disabled", "true");
+    triggerEl.classList.add("is-disabled");
+    triggerEl.textContent = "Starting remote session...";
+
+    try {
+      const deviceId = getOrCreateDeviceId();
+      const riskContext = computeRiskContext();
+
+      const response = await fetch(`${apiBaseUrl}/api/session/start`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          target_host: APP_CONFIG.targetHostId,
+          protocol: "rdp",
+          device_id: deviceId,
+          risk_context: riskContext,
+          // Only used when Cloudflare Access headers are unavailable.
+          user: APP_CONFIG.mockUserEmail || undefined,
+          source_ip: APP_CONFIG.mockSourceIp || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        if ((response.status === 401 || response.status === 403) && normalizeUrl(APP_CONFIG.accessLoginUrl)) {
+          window.location.href = normalizeUrl(APP_CONFIG.accessLoginUrl);
+          return;
+        }
+
+        throw new Error(`session/start failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const sessionId = payload.session_id;
+      const rdpProfileUrl = payload.rdp_profile_url;
+
+      if (!sessionId || !rdpProfileUrl) {
+        throw new Error("session/start response missing session_id or rdp_profile_url");
+      }
+
+      triggerRdpDownload(apiBaseUrl, rdpProfileUrl);
+
+      if (APP_CONFIG.enableNotifications) {
+        // Worker will re-check session ownership & enrich data using Access/edge headers.
+        try {
+          await dispatchLoginSuccess(apiBaseUrl, sessionId, deviceId);
+        } catch (err) {
+          console.error("notify/login-success failed", err);
+        }
+      }
+
+      triggerEl.textContent = "Session started. Downloading .rdp...";
+    } catch (error) {
+      console.error(error);
+      triggerEl.textContent = "Start failed. Check console.";
+      alert("Failed to start remote session. See console for details.");
+    } finally {
+      // Keep it disabled only for a short time; allow retries.
+      window.setTimeout(() => {
+        triggerEl.removeAttribute("aria-disabled");
+        triggerEl.classList.remove("is-disabled");
+        triggerEl.textContent = originalText;
+      }, 2500);
+    }
+  }
+
+  function computeRiskContext() {
+    // MVP: we can only infer local device time. Other risk signals must come from Worker/Access.
+    const hour = new Date().getHours();
+    const off_hours = hour < 6 || hour >= 23;
+    return { off_hours };
+  }
+
+  function getOrCreateDeviceId() {
+    const key = "9secvpn_device_id";
+    const existing = window.localStorage.getItem(key);
+    if (existing) return existing;
+
+    const value = `device_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
+    window.localStorage.setItem(key, value);
+    return value;
+  }
+
+  function triggerRdpDownload(apiBaseUrl, rdpProfileUrl) {
+    const urlSuffix = APP_CONFIG.mockUserEmail
+      ? `?mockUserEmail=${encodeURIComponent(APP_CONFIG.mockUserEmail)}`
+      : "";
+    const href = `${apiBaseUrl}${rdpProfileUrl}${urlSuffix}`;
+    const a = document.createElement("a");
+    a.href = href;
+    a.rel = "noreferrer";
+    a.click();
+  }
+
+  async function dispatchLoginSuccess(apiBaseUrl, sessionId, deviceId) {
+    const notifyUrl = `${apiBaseUrl}/api/notify/login-success`;
+    const res = await fetch(notifyUrl, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        device_id: deviceId,
+        // Only used when Cloudflare Access headers are unavailable.
+        user: APP_CONFIG.mockUserEmail || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`notify/login-success failed with status ${res.status}`);
+    }
+
+    return res.json().catch(() => null);
+  }
+
+  async function hydrateHistoryLists() {
+    const historyLists = Array.from(document.querySelectorAll("[data-history-list]"));
+    if (!historyLists.length) return;
+
+    const apiBaseUrl = normalizeUrl(APP_CONFIG.apiBaseUrl);
+    if (!apiBaseUrl) {
+      historyLists.forEach((list) => {
+        renderEmptyState(
+          list,
+          "Set apiBaseUrl to enable Worker-backed login history.",
+        );
+      });
+      return;
+    }
+
+    await Promise.all(
+      historyLists.map(async (list) => {
+        const limit = readLimit(list);
+
+        try {
+          const mockUserEmail = APP_CONFIG.mockUserEmail
+            ? `&mockUserEmail=${encodeURIComponent(APP_CONFIG.mockUserEmail)}`
+            : "";
+          const response = await fetch(`${apiBaseUrl}/api/history?limit=${limit}${mockUserEmail}`, {
+            headers: {
+              Accept: "application/json",
+            },
+            credentials: "include",
+          });
+
+          if (!response.ok) {
+            throw new Error(`History request failed with status ${response.status}`);
+          }
+
+          const payload = await response.json();
+          renderHistoryList(list, Array.isArray(payload.items) ? payload.items : []);
+        } catch (error) {
+          console.error(error);
+          renderEmptyState(list, "History not available yet (auth or API may be pending).");
+        }
+      }),
+    );
+  }
+
+  function readLimit(element) {
+    const raw = element.getAttribute("data-limit");
+    const parsed = Number.parseInt(raw || "", 10);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return APP_CONFIG.historyLimit;
+    }
+
+    return parsed;
+  }
+
+  function renderHistoryList(container, items) {
+    container.innerHTML = "";
+
+    if (!items.length) {
+      renderEmptyState(container, "No login events recorded yet.");
+      return;
+    }
+
+    items.forEach((item) => {
+      const listItem = document.createElement("li");
+      listItem.className = "timeline-item";
+
+      const copy = document.createElement("div");
+      copy.className = "timeline-copy";
+
+      const title = document.createElement("strong");
+      const result = item.result === "failure" ? "Login Failure" : "Login Success";
+      title.textContent = `${result} · ${item.user_email || item.user || "unknown user"}`;
+
+      const meta = document.createElement("span");
+      meta.className = "timeline-meta";
+      meta.textContent = [
+        item.target_host || APP_CONFIG.targetHostLabel,
+        item.source_ip || "unknown IP",
+        item.country || "unknown country",
+        formatDate(item.created_at || item.occurred_at),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      copy.append(title, meta);
+
+      const resultChip = document.createElement("span");
+      resultChip.className = `chip ${item.result === "failure" ? "chip-failure" : "chip-success"}`;
+      resultChip.textContent = item.result || "success";
+
+      const riskChip = document.createElement("span");
+      const risk = item.risk_level || "low";
+      riskChip.className = `chip chip-${risk}`;
+      riskChip.textContent = `${risk} risk`;
+
+      listItem.append(copy, resultChip, riskChip);
+      container.appendChild(listItem);
+    });
+  }
+
+  function renderEmptyState(container, message) {
+    container.innerHTML = "";
+    const item = document.createElement("li");
+    item.className = "empty-state";
+    item.textContent = message;
+    container.appendChild(item);
+  }
+
+  function formatDate(value) {
+    if (!value) return "time unavailable";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return new Intl.DateTimeFormat("zh-TW", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  }
+
+  function normalizeUrl(value) {
+    return String(value || "").trim().replace(/\/$/, "");
+  }
+})();

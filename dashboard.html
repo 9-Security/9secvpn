@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard | 9SecVPN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+TC:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/site.css" />
+  </head>
+  <body data-page="dashboard">
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="./index.html">
+          <span class="brand-mark">9S</span>
+          <span class="brand-copy">
+            <strong>9SecVPN</strong>
+            <span>Control Surface</span>
+          </span>
+        </a>
+        <nav class="site-nav">
+          <a class="is-current" href="./dashboard.html">Dashboard</a>
+          <a href="./history.html">History</a>
+          <a href="./security.html">Security</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="section-head">
+          <div>
+            <p class="eyebrow">Protected Access</p>
+            <h1>Dashboard</h1>
+            <p class="lede">
+              目前目標主機為 <strong data-target-host>Home Workstation</strong>。此頁僅顯示狀態與歷史，
+              不承擔任何 secret 或授權邏輯。
+            </p>
+          </div>
+          <a class="button button-primary" data-connect-link href="#">Start Remote Session</a>
+        </section>
+
+        <section class="stats-grid">
+          <article class="panel stat-card">
+            <p class="panel-label">Target Host</p>
+            <h2 data-target-host>Home Workstation</h2>
+            <p class="muted-note">Windows 11 Pro + cloudflared service</p>
+          </article>
+
+          <article class="panel stat-card">
+            <p class="panel-label">Access Policy</p>
+            <h2>MFA Required</h2>
+            <p class="muted-note">Cloudflare Access must validate identity first.</p>
+          </article>
+
+          <article class="panel stat-card">
+            <p class="panel-label">Session TTL</p>
+            <h2>30m / 15m / 5m</h2>
+            <p class="muted-note">Low / Medium / High risk default TTL</p>
+          </article>
+        </section>
+
+        <section class="grid-panels">
+          <article class="panel">
+            <p class="panel-label">Session Path</p>
+            <h2>Preferred Flow</h2>
+            <ol class="number-list">
+              <li>Cloudflare Access 驗證成功。</li>
+              <li>Worker 建立 session 與 audit event。</li>
+              <li>前端向 Worker 取得短時效 <code>.rdp</code> 檔。</li>
+              <li>本機 RDP Client 啟動連線。</li>
+            </ol>
+          </article>
+
+          <article class="panel">
+            <p class="panel-label">Risk Guardrails</p>
+            <h2>High Risk Triggers</h2>
+            <ul class="bullet-list">
+              <li>New geo</li>
+              <li>Off-hours login</li>
+              <li>Success after repeated failures</li>
+              <li>Admin-page access</li>
+            </ul>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <p class="panel-label">Recent Audit Events</p>
+              <h2>Latest Logins</h2>
+            </div>
+            <a class="text-link" href="./history.html">Open Full Timeline</a>
+          </div>
+          <ul class="timeline" data-history-list data-limit="8"></ul>
+        </section>
+      </main>
+    </div>
+
+    <script src="./js/config.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
+</html>
