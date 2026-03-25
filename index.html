@@ -14,19 +14,14 @@
   </head>
   <body data-page="index">
     <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="./index.html">
+      <header class="site-header site-header-simple">
+        <span class="brand brand-static">
           <span class="brand-mark">9S</span>
           <span class="brand-copy">
             <strong>9SecVPN</strong>
             <span>Remote</span>
           </span>
-        </a>
-        <nav class="site-nav">
-          <a href="./dashboard.html">Dashboard</a>
-          <a href="./history.html">History</a>
-          <a href="./security.html">Security</a>
-        </nav>
+        </span>
       </header>
 
       <main>
@@ -41,13 +36,8 @@
         </section>
 
         <section class="panel">
-          <div class="section-head">
-            <div>
-              <h2 class="h-no-marg">Recent</h2>
-            </div>
-            <a class="text-link" href="./history.html">All</a>
-          </div>
-          <ul class="timeline" data-history-list data-limit="5"></ul>
+          <h2 class="h-no-marg panel-inline-head">Recent</h2>
+          <ul class="timeline" data-history-list data-limit="20"></ul>
         </section>
       </main>
     </div>

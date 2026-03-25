@@ -67,6 +67,18 @@ code,
   box-shadow: var(--shadow);
 }
 
+.site-header-simple {
+  justify-content: flex-start;
+}
+
+.brand-static {
+  cursor: default;
+}
+
+.panel-inline-head {
+  margin-bottom: 1rem;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
