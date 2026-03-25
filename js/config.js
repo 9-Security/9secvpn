@@ -7,7 +7,7 @@ globalThis.__APP_CONFIG__ = {
 
   // Cloudflare Access login URL for the API application (public URL).
   // If set, Portal will redirect here when API returns 401/403.
-  accessLoginUrl: "",
+  accessLoginUrl: "https://9secvpn-api.nine-security.com/cdn-cgi/access/login",
 
   // UI-only labels (no sensitive meaning).
   targetHostLabel: "Home Workstation",
