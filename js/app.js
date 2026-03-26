@@ -10,6 +10,9 @@
     // Local/dev fallback (only used when Cloudflare Access headers are not present).
     mockUserEmail: "",
     mockSourceIp: "",
+    cloudflaredDocsUrl:
+      "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/",
+    cloudflaredReleasesUrl: "https://github.com/cloudflare/cloudflared/releases",
   };
 
   const query = new URLSearchParams(window.location.search);
@@ -25,10 +28,17 @@
       query.get("mockSourceIp") ?? (globalThis.__APP_CONFIG__?.mockSourceIp || DEFAULT_CONFIG.mockSourceIp),
     targetHostId:
       query.get("targetHostId") ?? (globalThis.__APP_CONFIG__?.targetHostId || DEFAULT_CONFIG.targetHostId),
+    cloudflaredDocsUrl:
+      query.get("cloudflaredDocsUrl") ??
+      (globalThis.__APP_CONFIG__?.cloudflaredDocsUrl || DEFAULT_CONFIG.cloudflaredDocsUrl),
+    cloudflaredReleasesUrl:
+      query.get("cloudflaredReleasesUrl") ??
+      (globalThis.__APP_CONFIG__?.cloudflaredReleasesUrl || DEFAULT_CONFIG.cloudflaredReleasesUrl),
   });
 
   document.addEventListener("DOMContentLoaded", () => {
     hydrateHostLabels();
+    hydrateCloudflaredLinks();
     wireConnectLinks();
     void hydrateHistoryLists();
   });
@@ -36,6 +46,17 @@
   function hydrateHostLabels() {
     document.querySelectorAll("[data-target-host]").forEach((element) => {
       element.textContent = APP_CONFIG.targetHostLabel;
+    });
+  }
+
+  function hydrateCloudflaredLinks() {
+    const docs = normalizeUrl(APP_CONFIG.cloudflaredDocsUrl);
+    const releases = normalizeUrl(APP_CONFIG.cloudflaredReleasesUrl);
+    document.querySelectorAll("[data-cloudflared-docs]").forEach((el) => {
+      if (el instanceof HTMLAnchorElement && docs) el.href = docs;
+    });
+    document.querySelectorAll("[data-cloudflared-releases]").forEach((el) => {
+      if (el instanceof HTMLAnchorElement && releases) el.href = releases;
     });
   }
 

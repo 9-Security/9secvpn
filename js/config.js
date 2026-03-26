@@ -15,5 +15,10 @@ globalThis.__APP_CONFIG__ = {
 
   // Enable sending notify/login-success after session start.
   enableNotifications: true,
+
+  // Official Cloudflare Tunnel client (cloudflared) — public URLs only.
+  cloudflaredDocsUrl:
+    "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/",
+  cloudflaredReleasesUrl: "https://github.com/cloudflare/cloudflared/releases",
 };
 

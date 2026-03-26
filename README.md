@@ -9,6 +9,7 @@ Edit `js/config.js`:
 - `apiBaseUrl`
 - `accessLoginUrl`
 - `targetHostLabel` / `targetHostId`
+- `cloudflaredDocsUrl` / `cloudflaredReleasesUrl` (official download links)
 
 Do **not** put any secrets in GitHub Pages.
 

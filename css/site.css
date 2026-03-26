@@ -79,6 +79,13 @@ code,
   margin-bottom: 1rem;
 }
 
+.portal-footnote {
+  margin-top: 1.1rem;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+  max-width: 52ch;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
