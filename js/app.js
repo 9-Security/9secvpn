@@ -61,6 +61,83 @@
     return String(fallback || "").trim();
   }
 
+  /** After API Access login, send user back to Portal (Cloudflare accepts redirect_url on login URLs). */
+  function buildLoginUrlWithReturn() {
+    const loginBase = normalizeUrl(APP_CONFIG.accessLoginUrl);
+    if (!loginBase) return "";
+    const back = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const sep = loginBase.includes("?") ? "&" : "?";
+    return `${loginBase}${sep}redirect_url=${encodeURIComponent(back)}`;
+  }
+
+  /**
+   * Cloudflare Access returns 302 to *.cloudflareaccess.com; fetch “follow” crosses origins → CORS error.
+   * Use redirect: manual + full-page navigation to complete login, then return to Portal via redirect_url.
+   */
+  function assignIfAccessRedirect(response, apiBaseUrl) {
+    const loginGo = buildLoginUrlWithReturn();
+    const st = response.status;
+
+    if (st >= 300 && st < 400) {
+      const loc = response.headers.get("Location");
+      if (loc) {
+        window.location.assign(new URL(loc, apiBaseUrl).href);
+        return true;
+      }
+      if (loginGo) {
+        window.location.assign(loginGo);
+        return true;
+      }
+    }
+
+    if (st === 401 || st === 403) {
+      if (loginGo) {
+        window.location.assign(loginGo);
+        return true;
+      }
+      return false;
+    }
+
+    if (response.type === "opaqueredirect" || (st === 0 && response.type === "opaque")) {
+      if (loginGo) {
+        window.location.assign(loginGo);
+        return true;
+      }
+      return false;
+    }
+
+    return false;
+  }
+
+  /**
+   * @returns {Promise<Response | null>} null = browser is navigating to Access / login
+   */
+  async function fetchApi(apiBaseUrl, pathAndQuery, init = {}) {
+    const base = normalizeUrl(apiBaseUrl);
+    const url = pathAndQuery.startsWith("http") ? pathAndQuery : `${base}${pathAndQuery.startsWith("/") ? "" : "/"}${pathAndQuery}`;
+    const loginGo = buildLoginUrlWithReturn();
+
+    try {
+      const response = await fetch(url, {
+        credentials: "include",
+        redirect: "manual",
+        ...init,
+      });
+
+      if (assignIfAccessRedirect(response, base)) {
+        return null;
+      }
+
+      return response;
+    } catch (err) {
+      if (loginGo && err instanceof TypeError) {
+        window.location.assign(loginGo);
+        return null;
+      }
+      throw err;
+    }
+  }
+
   function hydrateHostLabels() {
     document.querySelectorAll("[data-target-host]").forEach((element) => {
       element.textContent = APP_CONFIG.targetHostLabel;
@@ -175,9 +252,8 @@
       const deviceId = getOrCreateDeviceId();
       const riskContext = computeRiskContext();
 
-      const response = await fetch(`${apiBaseUrl}/api/session/start`, {
+      const response = await fetchApi(apiBaseUrl, "/api/session/start", {
         method: "POST",
-        credentials: "include",
         body: JSON.stringify({
           target_host: APP_CONFIG.targetHostId,
           protocol: "rdp",
@@ -188,14 +264,11 @@
           source_ip: APP_CONFIG.mockSourceIp || undefined,
         }),
       });
+      if (!response) return;
 
       if (!response.ok) {
-        if ((response.status === 401 || response.status === 403) && normalizeUrl(APP_CONFIG.accessLoginUrl)) {
-          window.location.href = normalizeUrl(APP_CONFIG.accessLoginUrl);
-          return;
-        }
-
-        throw new Error(`session/start failed with status ${response.status}`);
+        const errText = await readErrorBody(response);
+        throw new Error(errText || `session/start failed with status ${response.status}`);
       }
 
       const payload = await response.json();
@@ -221,7 +294,8 @@
     } catch (error) {
       console.error(error);
       triggerEl.textContent = "Start failed. Check console.";
-      alert("Failed to start remote session. See console for details.");
+      const msg = error instanceof Error ? error.message : String(error);
+      alert(`Failed to start remote session.\n\n${msg}`);
     } finally {
       // Keep it disabled only for a short time; allow retries.
       window.setTimeout(() => {
@@ -262,10 +336,8 @@
   }
 
   async function dispatchLoginSuccess(apiBaseUrl, sessionId, deviceId) {
-    const notifyUrl = `${apiBaseUrl}/api/notify/login-success`;
-    const res = await fetch(notifyUrl, {
+    const res = await fetchApi(apiBaseUrl, "/api/notify/login-success", {
       method: "POST",
-      credentials: "include",
       body: JSON.stringify({
         session_id: sessionId,
         device_id: deviceId,
@@ -273,12 +345,28 @@
         user: APP_CONFIG.mockUserEmail || undefined,
       }),
     });
+    if (!res) return null;
 
     if (!res.ok) {
       throw new Error(`notify/login-success failed with status ${res.status}`);
     }
 
     return res.json().catch(() => null);
+  }
+
+  async function readErrorBody(res) {
+    try {
+      const data = await res.clone().json();
+      const m = data?.error?.message || data?.message;
+      if (m) return String(m);
+    } catch {
+      try {
+        return (await res.clone().text()).slice(0, 200);
+      } catch {
+        return "";
+      }
+    }
+    return "";
   }
 
   async function hydrateHistoryLists() {
@@ -304,12 +392,12 @@
           const mockUserEmail = APP_CONFIG.mockUserEmail
             ? `&mockUserEmail=${encodeURIComponent(APP_CONFIG.mockUserEmail)}`
             : "";
-          const response = await fetch(`${apiBaseUrl}/api/history?limit=${limit}${mockUserEmail}`, {
+          const response = await fetchApi(apiBaseUrl, `/api/history?limit=${limit}${mockUserEmail}`, {
             headers: {
               Accept: "application/json",
             },
-            credentials: "include",
           });
+          if (!response) return;
 
           if (!response.ok) {
             throw new Error(`History request failed with status ${response.status}`);
