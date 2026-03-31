@@ -76,7 +76,8 @@
     }
     const base = normalizeUrl(APP_CONFIG.apiBaseUrl);
     if (!base) return "";
-    return `${base}/api/history?limit=1`;
+    // GET /api/session/start → Worker 302 回 Portal（通過 Access 拿 cookie 後不會卡在 JSON）
+    return `${base}/api/session/start`;
   }
 
   /**
@@ -122,6 +123,7 @@
    * @returns {Promise<Response | null>} null = browser is navigating to Access / login
    */
   async function fetchApi(apiBaseUrl, pathAndQuery, init = {}) {
+    const { recoverFromAuthFailure = true, ...fetchInit } = init;
     const base = normalizeUrl(apiBaseUrl);
     const url = pathAndQuery.startsWith("http") ? pathAndQuery : `${base}${pathAndQuery.startsWith("/") ? "" : "/"}${pathAndQuery}`;
     const recovery = buildAccessRecoveryUrl();
@@ -130,16 +132,16 @@
       const response = await fetch(url, {
         credentials: "include",
         redirect: "manual",
-        ...init,
+        ...fetchInit,
       });
 
-      if (assignIfAccessRedirect(response, base)) {
+      if (recoverFromAuthFailure && assignIfAccessRedirect(response, base)) {
         return null;
       }
 
       return response;
     } catch (err) {
-      if (recovery && err instanceof TypeError) {
+      if (recoverFromAuthFailure && recovery && err instanceof TypeError) {
         window.location.assign(recovery);
         return null;
       }
@@ -340,19 +342,22 @@
     const href = `${apiBaseUrl}${rdpProfileUrl}${urlSuffix}`;
     const a = document.createElement("a");
     a.href = href;
-    a.rel = "noreferrer";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
     a.click();
   }
 
   async function dispatchLoginSuccess(apiBaseUrl, sessionId, deviceId) {
     const res = await fetchApi(apiBaseUrl, "/api/notify/login-success", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         session_id: sessionId,
         device_id: deviceId,
         // Only used when Cloudflare Access headers are unavailable.
         user: APP_CONFIG.mockUserEmail || undefined,
       }),
+      recoverFromAuthFailure: false,
     });
     if (!res) return null;
 

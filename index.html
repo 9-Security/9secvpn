@@ -39,7 +39,9 @@
 
         <section class="panel">
           <h2 class="h-no-marg panel-inline-head">連線程式</h2>
-          <p class="muted-note">請手動下載並安裝 Cloudflare 官方 <strong>cloudflared</strong>（依你的作業系統選擇安裝檔）。</p>
+          <p class="muted-note">
+            `.rdp` 會直接連到 Cloudflare RDP 主機名稱（例如 <code class="mono-flow">9sec-rdp...:3389</code>），一般使用者不需在本地安裝 cloudflared。
+          </p>
           <div class="hero-actions">
             <a
               class="button button-secondary"
@@ -63,7 +65,7 @@
           </p>
           <div class="panel rdp-client-hint" data-rdp-client-hint hidden>
             <p class="muted-note">
-              <strong>RDP 已受 Access 保護時</strong>：請先在本機安裝 <strong>cloudflared</strong>，並在終端機常駐執行（埠號須與下載的 <code class="mono-flow">.rdp</code> 一致；Windows 若 <code class="mono-flow">3389</code> 已被占用請改別埠）：
+              <strong>相容模式（僅在啟用本地代理時）</strong>：若你的環境仍使用 cloudflared 用戶端代理，再依下列命令啟動後開啟 <code class="mono-flow">.rdp</code>：
             </p>
             <pre class="mono-flow rdp-cmd-block" data-rdp-cmd-block></pre>
             <p class="muted-note">
@@ -80,7 +82,7 @@
       </main>
     </div>
 
-    <script src="./js/config.js?v=20260331-5"></script>
-    <script src="./js/app.js?v=20260331-5"></script>
+    <script src="./js/config.js?v=20260331-6"></script>
+    <script src="./js/app.js?v=20260331-6"></script>
   </body>
 </html>
