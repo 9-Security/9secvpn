@@ -61,13 +61,22 @@
     return String(fallback || "").trim();
   }
 
-  /** After API Access login, send user back to Portal (Cloudflare accepts redirect_url on login URLs). */
-  function buildLoginUrlWithReturn() {
-    const loginBase = normalizeUrl(APP_CONFIG.accessLoginUrl);
-    if (!loginBase) return "";
-    const back = `${window.location.origin}${window.location.pathname}${window.location.search}`;
-    const sep = loginBase.includes("?") ? "&" : "?";
-    return `${loginBase}${sep}redirect_url=${encodeURIComponent(back)}`;
+  /**
+   * When fetch cannot complete Access (opaque redirect / network), send the user to a real GET on the API host
+   * so Cloudflare applies the correct Access app for 9secvpn-api… (no guesswork on *.cloudflareaccess.com paths).
+   * After login you may see JSON — use the portal bookmark or Back, then Connect again.
+   * Optional: set accessLoginUrl in config.js to a custom login URL with redirect_url back to the portal.
+   */
+  function buildAccessRecoveryUrl() {
+    const custom = normalizeUrl(APP_CONFIG.accessLoginUrl);
+    if (custom) {
+      const back = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+      const sep = custom.includes("?") ? "&" : "?";
+      return `${custom}${sep}redirect_url=${encodeURIComponent(back)}`;
+    }
+    const base = normalizeUrl(APP_CONFIG.apiBaseUrl);
+    if (!base) return "";
+    return `${base}/api/history?limit=1`;
   }
 
   /**
@@ -75,7 +84,7 @@
    * Use redirect: manual + full-page navigation to complete login, then return to Portal via redirect_url.
    */
   function assignIfAccessRedirect(response, apiBaseUrl) {
-    const loginGo = buildLoginUrlWithReturn();
+    const recovery = buildAccessRecoveryUrl();
     const st = response.status;
 
     if (st >= 300 && st < 400) {
@@ -84,23 +93,23 @@
         window.location.assign(new URL(loc, apiBaseUrl).href);
         return true;
       }
-      if (loginGo) {
-        window.location.assign(loginGo);
+      if (recovery) {
+        window.location.assign(recovery);
         return true;
       }
     }
 
     if (st === 401 || st === 403) {
-      if (loginGo) {
-        window.location.assign(loginGo);
+      if (recovery) {
+        window.location.assign(recovery);
         return true;
       }
       return false;
     }
 
     if (response.type === "opaqueredirect" || (st === 0 && response.type === "opaque")) {
-      if (loginGo) {
-        window.location.assign(loginGo);
+      if (recovery) {
+        window.location.assign(recovery);
         return true;
       }
       return false;
@@ -115,7 +124,7 @@
   async function fetchApi(apiBaseUrl, pathAndQuery, init = {}) {
     const base = normalizeUrl(apiBaseUrl);
     const url = pathAndQuery.startsWith("http") ? pathAndQuery : `${base}${pathAndQuery.startsWith("/") ? "" : "/"}${pathAndQuery}`;
-    const loginGo = buildLoginUrlWithReturn();
+    const recovery = buildAccessRecoveryUrl();
 
     try {
       const response = await fetch(url, {
@@ -130,8 +139,8 @@
 
       return response;
     } catch (err) {
-      if (loginGo && err instanceof TypeError) {
-        window.location.assign(loginGo);
+      if (recovery && err instanceof TypeError) {
+        window.location.assign(recovery);
         return null;
       }
       throw err;
