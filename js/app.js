@@ -110,10 +110,6 @@
       const response = await fetch(`${apiBaseUrl}/api/session/start`, {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
         body: JSON.stringify({
           target_host: APP_CONFIG.targetHostId,
           protocol: "rdp",
@@ -201,10 +197,6 @@
     const res = await fetch(notifyUrl, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
       body: JSON.stringify({
         session_id: sessionId,
         device_id: deviceId,
