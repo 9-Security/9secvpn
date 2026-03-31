@@ -24,9 +24,8 @@ globalThis.__APP_CONFIG__ = {
     "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/",
   cloudflaredReleasesUrl: "https://github.com/cloudflare/cloudflared/releases",
 
-  // Optional helper text for legacy client-proxy mode only.
-  // Keep empty when using direct .rdp target to Cloudflare RDP hostname.
-  accessRdpHostname: "",
+  // Client-proxy mode: show cloudflared command before opening downloaded .rdp.
+  accessRdpHostname: "9sec-rdp.nine-security.com",
   rdpClientProxyHost: "127.0.0.1",
   rdpClientProxyPort: "13389",
   cloudflaredRdpAuthDocUrl:
