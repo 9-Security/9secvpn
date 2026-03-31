@@ -8,9 +8,11 @@ globalThis.__APP_CONFIG__ = {
   // Example: "https://9secvpn-api.nine-security.com"
   apiBaseUrl: "https://9secvpn-api.nine-security.com",
 
-  // Cloudflare Access login URL for the API application (public URL).
-  // Used when Connect/session API returns 401/403. Portal hostname should have its own Access app.
-  accessLoginUrl: "https://9secvpn-api.nine-security.com/cdn-cgi/access/login",
+  // Cloudflare Access login for the API app is NOT served on the API hostname.
+  // Format: https://<team-name>.cloudflareaccess.com/cdn-cgi/access/login/<Access_app_hostname>
+  // (<Access_app_hostname> is usually the same host as apiBaseUrl, e.g. 9secvpn-api.example.com.)
+  accessLoginUrl:
+    "https://9secvpn.cloudflareaccess.com/cdn-cgi/access/login/9secvpn-api.nine-security.com",
 
   // UI-only labels (no sensitive meaning).
   targetHostLabel: "Home Workstation",
