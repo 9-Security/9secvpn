@@ -96,19 +96,24 @@
     const accessLoginHref = normalizeUrl(APP_CONFIG.accessLoginUrl);
 
     document.querySelectorAll("[data-connect-link]").forEach((element) => {
-      if (!(element instanceof HTMLAnchorElement)) {
+      if (!(element instanceof HTMLButtonElement) && !(element instanceof HTMLAnchorElement)) {
         return;
       }
 
       const startEnabled = Boolean(apiBaseUrl);
       if (!startEnabled) {
-        // Fallback: let the user navigate to Access first (worker call will be blocked).
         if (accessLoginHref) {
-          element.href = accessLoginHref;
           element.removeAttribute("aria-disabled");
           element.classList.remove("is-disabled");
+          if (element instanceof HTMLAnchorElement) {
+            element.href = accessLoginHref;
+          } else {
+            element.addEventListener("click", () => {
+              window.location.href = accessLoginHref;
+            });
+          }
         } else {
-          element.href = "#";
+          if (element instanceof HTMLAnchorElement) element.href = "#";
           element.setAttribute("aria-disabled", "true");
           element.classList.add("is-disabled");
           element.title = "Set apiBaseUrl to enable Worker-backed connect flow.";
@@ -116,7 +121,7 @@
         return;
       }
 
-      element.href = "#";
+      if (element instanceof HTMLAnchorElement) element.href = "#";
       element.removeAttribute("aria-disabled");
       element.classList.remove("is-disabled");
 
@@ -132,6 +137,7 @@
     const originalText = triggerEl.textContent || "";
     triggerEl.setAttribute("aria-disabled", "true");
     triggerEl.classList.add("is-disabled");
+    if (triggerEl instanceof HTMLButtonElement) triggerEl.disabled = true;
     triggerEl.textContent = "Starting remote session...";
 
     try {
@@ -190,6 +196,7 @@
       window.setTimeout(() => {
         triggerEl.removeAttribute("aria-disabled");
         triggerEl.classList.remove("is-disabled");
+        if (triggerEl instanceof HTMLButtonElement) triggerEl.disabled = false;
         triggerEl.textContent = originalText;
       }, 2500);
     }

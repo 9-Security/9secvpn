@@ -254,6 +254,14 @@ main {
   transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
 }
 
+button.button {
+  font: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  appearance: none;
+}
+
 .button:hover {
   transform: translateY(-1px);
 }
