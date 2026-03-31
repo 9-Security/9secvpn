@@ -25,9 +25,13 @@
   const APP_CONFIG = Object.freeze({
     ...DEFAULT_CONFIG,
     ...(globalThis.__APP_CONFIG__ || {}),
-    apiBaseUrl: query.get("apiBaseUrl") ?? (globalThis.__APP_CONFIG__?.apiBaseUrl || DEFAULT_CONFIG.apiBaseUrl),
-    accessLoginUrl:
-      query.get("accessLoginUrl") ?? (globalThis.__APP_CONFIG__?.accessLoginUrl || DEFAULT_CONFIG.accessLoginUrl),
+    /* `??` treats "" as set; empty query must not wipe config.js */
+    apiBaseUrl: pickQueryString(query, "apiBaseUrl", globalThis.__APP_CONFIG__?.apiBaseUrl || DEFAULT_CONFIG.apiBaseUrl),
+    accessLoginUrl: pickQueryString(
+      query,
+      "accessLoginUrl",
+      globalThis.__APP_CONFIG__?.accessLoginUrl || DEFAULT_CONFIG.accessLoginUrl,
+    ),
     mockUserEmail:
       query.get("mockUserEmail") ?? (globalThis.__APP_CONFIG__?.mockUserEmail || DEFAULT_CONFIG.mockUserEmail),
     mockSourceIp:
@@ -49,6 +53,13 @@
     wireConnectLinks();
     void hydrateHistoryLists();
   });
+
+  function pickQueryString(params, key, fallback) {
+    const raw = params.get(key);
+    const trimmed = String(raw ?? "").trim();
+    if (trimmed) return trimmed;
+    return String(fallback || "").trim();
+  }
 
   function hydrateHostLabels() {
     document.querySelectorAll("[data-target-host]").forEach((element) => {
@@ -105,17 +116,15 @@
         if (accessLoginHref) {
           element.removeAttribute("aria-disabled");
           element.classList.remove("is-disabled");
+          if (element instanceof HTMLButtonElement) element.disabled = false;
           if (element instanceof HTMLAnchorElement) {
             element.href = accessLoginHref;
-          } else {
-            element.addEventListener("click", () => {
-              window.location.href = accessLoginHref;
-            });
           }
         } else {
           if (element instanceof HTMLAnchorElement) element.href = "#";
           element.setAttribute("aria-disabled", "true");
           element.classList.add("is-disabled");
+          if (element instanceof HTMLButtonElement) element.disabled = true;
           element.title = "Set apiBaseUrl to enable Worker-backed connect flow.";
         }
         return;
@@ -124,12 +133,34 @@
       if (element instanceof HTMLAnchorElement) element.href = "#";
       element.removeAttribute("aria-disabled");
       element.classList.remove("is-disabled");
+      if (element instanceof HTMLButtonElement) element.disabled = false;
+    });
 
-      element.addEventListener("click", async (e) => {
+    if (document.body.dataset.connectDelegated === "1") {
+      return;
+    }
+    document.body.dataset.connectDelegated = "1";
+    document.body.addEventListener("click", (e) => {
+      const el = e.target && e.target.closest && e.target.closest("[data-connect-link]");
+      if (!el || (!(el instanceof HTMLButtonElement) && !(el instanceof HTMLAnchorElement))) {
+        return;
+      }
+
+      const base = normalizeUrl(APP_CONFIG.apiBaseUrl);
+      const loginHref = normalizeUrl(APP_CONFIG.accessLoginUrl);
+      const enabled = Boolean(base);
+
+      if (!enabled) {
+        if (!loginHref) return;
+        if (el instanceof HTMLAnchorElement) return;
         e.preventDefault();
-        if (element.getAttribute("aria-disabled") === "true") return;
-        await startRemoteSession(element, apiBaseUrl);
-      });
+        window.location.href = loginHref;
+        return;
+      }
+
+      e.preventDefault();
+      if (el.getAttribute("aria-disabled") === "true") return;
+      void startRemoteSession(el, base);
     });
   }
 
