@@ -59,6 +59,16 @@
           <p class="muted-note portal-footnote">
             登入與兩步驟驗證由 <strong>Cloudflare Access</strong> 處理；可在 Zero Trust 後台加入 <strong>Google</strong> 等身分來源，不必在這個網站實作 OAuth。
           </p>
+          <div class="panel rdp-client-hint" data-rdp-client-hint hidden>
+            <p class="muted-note">
+              <strong>RDP 已受 Access 保護時</strong>：請先在本機安裝 <strong>cloudflared</strong>，並在終端機常駐執行（埠號須與下載的 <code class="mono-flow">.rdp</code> 一致；Windows 若 <code class="mono-flow">3389</code> 已被占用請改別埠）：
+            </p>
+            <pre class="mono-flow rdp-cmd-block" data-rdp-cmd-block></pre>
+            <p class="muted-note">
+              執行後瀏覽器會做 Access 登入；完成後再按 Connect 下載並開啟 <code class="mono-flow">.rdp</code>。說明：
+              <a data-cloudflared-rdp-doc href="#" target="_blank" rel="noopener noreferrer">Cloudflare（用戶端 cloudflared + RDP）</a>。
+            </p>
+          </div>
         </section>
 
         <section class="panel">

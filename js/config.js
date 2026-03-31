@@ -23,5 +23,12 @@ globalThis.__APP_CONFIG__ = {
   cloudflaredDocsUrl:
     "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/",
   cloudflaredReleasesUrl: "https://github.com/cloudflare/cloudflared/releases",
+
+  // RDP 網域已套用 Access 時：用戶端需先跑 cloudflared access rdp，再開 .rdp（內容會連到下方 proxy 位址）。
+  accessRdpHostname: "9sec-rdp.nine-security.com",
+  rdpClientProxyHost: "127.0.0.1",
+  rdpClientProxyPort: "13389",
+  cloudflaredRdpAuthDocUrl:
+    "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/use-cases/rdp/rdp-cloudflared-authentication/",
 };
 

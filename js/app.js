@@ -13,6 +13,12 @@
     cloudflaredDocsUrl:
       "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/",
     cloudflaredReleasesUrl: "https://github.com/cloudflare/cloudflared/releases",
+
+    accessRdpHostname: "",
+    rdpClientProxyHost: "127.0.0.1",
+    rdpClientProxyPort: "13389",
+    cloudflaredRdpAuthDocUrl:
+      "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/use-cases/rdp/rdp-cloudflared-authentication/",
   };
 
   const query = new URLSearchParams(window.location.search);
@@ -39,6 +45,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     hydrateHostLabels();
     hydrateCloudflaredLinks();
+    hydrateRdpClientHint();
     wireConnectLinks();
     void hydrateHistoryLists();
   });
@@ -58,6 +65,30 @@
     document.querySelectorAll("[data-cloudflared-releases]").forEach((el) => {
       if (el instanceof HTMLAnchorElement && releases) el.href = releases;
     });
+  }
+
+  function hydrateRdpClientHint() {
+    const wrap = document.querySelector("[data-rdp-client-hint]");
+    const pre = document.querySelector("[data-rdp-cmd-block]");
+    const docLink = document.querySelector("[data-cloudflared-rdp-doc]");
+    if (!wrap || !pre) return;
+
+    const host = String(APP_CONFIG.accessRdpHostname || "").trim();
+    const proxyHost = String(APP_CONFIG.rdpClientProxyHost || "127.0.0.1").trim();
+    const proxyPort = String(APP_CONFIG.rdpClientProxyPort || "13389").trim();
+
+    if (!host) {
+      wrap.setAttribute("hidden", "");
+      return;
+    }
+
+    pre.textContent = `cloudflared access rdp --hostname ${host} --url rdp://${proxyHost}:${proxyPort}`;
+    wrap.removeAttribute("hidden");
+
+    if (docLink instanceof HTMLAnchorElement) {
+      const u = normalizeUrl(APP_CONFIG.cloudflaredRdpAuthDocUrl);
+      if (u) docLink.href = u;
+    }
   }
 
   function wireConnectLinks() {
